@@ -23,11 +23,14 @@ function addGitRepo(gitRepo, files, config) {
                 console.log(`${staged} files to commit: ${comment}.`)
                 gitRepo.commitSync(comment)
             }
-            gitRepo.push(config.gitRepo.remote, config.gitRepo.branch, function(err) {
-                if (err) {
-                    throw err
-                }
-            })
+            if (config.gitRepo.remote != null && config.gitRepo.branch != null &&
+                config.gitRepo.remote.length > 0 && config.gitRepo.length > 0) {
+                gitRepo.push(config.gitRepo.remote, config.gitRepo.branch, function(err) {
+                    if (err) {
+                        throw err
+                    }
+                })
+            }
         }
     })
 }
