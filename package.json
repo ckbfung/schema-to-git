@@ -1,0 +1,31 @@
+{
+  "name": "schema-to-git",
+  "version": "1.0.0",
+  "description": "Synchronize DB Schema to Git",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ckbfung/schema-to-git.git"
+  },
+  "keywords": [
+    "schema\u001b[D\u001b[D\u001b[D\u001b[D\u001b[D\u001b[Ddb",
+    "schema",
+    "synchronize",
+    "git"
+  ],
+  "author": "ckbfung",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ckbfung/schema-to-git/issues"
+  },
+  "homepage": "https://github.com/ckbfung/schema-to-git#readme",
+  "dependencies": {
+    "edge": "^6.5.1",
+    "edge-sql": "^0.1.2",
+    "git-controller": "^1.0.5",
+    "moment": "^2.17.1"
+  }
+}
