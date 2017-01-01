@@ -38,18 +38,21 @@ function addGitRepo(files, config, callback) {
     })
 }
 
-function queryObject(
-        result, destFolder,
-        item, lastModifiedDate, callback) {
+function queryObject(result, config, item, callback) {
+    var destFolder = config.destFolder
+    var Param = config.param
     var files = []
+
     var getObject = function(result) {
         if (result.length <= 0) {
             callback(null, files)
         } else {
             var Object = result.shift()
+            var Param = config.param
+
             var name = eval("`" + item.Object.Name + "`")
             var definition = eval("`" + item.Object.Definition + "`")
-            
+
             var destFile = destFolder + '/' + name.replace(' ', '')
             fs.writeFileSync(destFile, definition, 'utf8')
 
@@ -60,9 +63,7 @@ function queryObject(
     getObject(result)
 }
 
-function queryObjects(
-        result, item, config,
-        lastModifiedDate, callback) {
+function queryObjects(result, item, config, callback) {
     var addFiles = []
     var getObject = function(result) {
         if (result.length <= 0) {
@@ -71,6 +72,7 @@ function queryObjects(
             var Object = result.shift()
             console.dir(Object)
 
+            var Param = config.param
             var query = eval("`" + item.QueryObject + "`")
             console.log(query)
 
@@ -80,7 +82,7 @@ function queryObjects(
                     callback(error)
                 } else {
                     queryObject(
-                        objects, config.destFolder, item, lastModifiedDate,
+                        objects, config, item,
                         function(error, destFile) {
                             if (error) {
                                 callback(error)
@@ -96,7 +98,7 @@ function queryObjects(
     getObject(result)
 }
 
-function schemaSync(connectionString, syncConfig, lastModifiedDate, callback) {
+function schemaSync(connectionString, syncConfig, param, callback) {
     if (callback == null) {
         callback = function(err) {
             if (err) {
@@ -104,8 +106,10 @@ function schemaSync(connectionString, syncConfig, lastModifiedDate, callback) {
             }
         }
     }
+
     var config = JSON.parse(JSON.stringify(syncConfig))
     config.connectionString = connectionString
+    config.param = JSON.parse(JSON.stringify(param))
 
     if (fs.existsSync(config.schemaPath) == false) {
         fx.mkdirSync(config.schemaPath, 777, true)
@@ -124,6 +128,7 @@ function schemaSync(connectionString, syncConfig, lastModifiedDate, callback) {
                 fx.mkdirSync(config.destFolder, 777, true)
             }
 
+            var Param = config.param
             var query = eval("`" + item.QueryObjects + "`")
             console.log(query)
 
@@ -132,8 +137,7 @@ function schemaSync(connectionString, syncConfig, lastModifiedDate, callback) {
                 if (error) {
                     callback(error)
                 } else {
-                    queryObjects(
-                        result,  item, config, lastModifiedDate,
+                    queryObjects(result,  item, config,
                         function(err) {
                             if (err) {
                                 callback(err)
