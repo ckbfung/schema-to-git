@@ -13,7 +13,6 @@ var SchemaSync = require('schema-to-git')
 
 var config = {
     DB: 'MS SQL',
-    connectionString: "Data Source=Hostname\\DbInstance;Initial Catalog=DbName;Integrated Security=True",
     schemaPath: '../Schema',
     gitRepo : {
         path: './',
@@ -36,5 +35,6 @@ var config = {
     ]
 }
 
-SchemaSync(config, '10/01/1997')
+var connectionString: "Data Source=Hostname\\DbInstance;Initial Catalog=DbName;Integrated Security=True"
+SchemaSync(connectionString, config, '10/01/1997')
 ```
