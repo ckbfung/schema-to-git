@@ -2,46 +2,51 @@
 
 var moment = require('moment')
 var fs = require('fs')
+var fx = require('node-fs')
 var git = require('git-controller')
-var edge = require('edge')
+var dbConnection = require('./dbConnection')
 
-function addGitRepo(gitRepo, files, config) {
+function addGitRepo(files, config, callback) {
+    var gitRepo = config.gitRepo
     var subFiles = files
     if (files.length > 50) {
         subFiles = files.splice(0,50)
     }
     gitRepo.add(subFiles, function(err) {
         if (err) {
-            throw err
-        }
-        if (subFiles != files) {
-            addGitRepo(gitRepo, files, config)
+            callback(err)
         } else {
-            var staged = gitRepo.statusSync().staged.length
-            if (staged > 0) {
-                var comment = moment(new Date()).format('YYYY-MM-DD hh:mm:ss')
-                console.log(`${staged} files to commit: ${comment}.`)
-                gitRepo.commitSync(comment)
-            }
-            if (config.gitRepo.remote != null && config.gitRepo.branch != null &&
-                config.gitRepo.remote.length > 0 && config.gitRepo.length > 0) {
-                gitRepo.push(config.gitRepo.remote, config.gitRepo.branch, function(err) {
-                    if (err) {
-                        throw err
-                    }
-                })
+            if (subFiles != files) {
+                addGitRepo(files, config, callback)
+            } else {
+                var staged = gitRepo.statusSync().staged.length
+                if (staged > 0) {
+                    var comment = moment(new Date()).format('YYYY-MM-DD hh:mm:ss')
+                    console.log(`${staged} files to commit: ${comment}.`)
+                    gitRepo.commitSync(comment)
+                }
+                if (config.git.remote != null && config.git.branch != null &&
+                    config.git.remote.length > 0 && config.git.length > 0) {
+                    gitRepo.push(config.git.remote, config.git.branch, function(err) {
+                        callback(err)
+                    })
+                } else {
+                    callback(null)
+                }
             }
         }
     })
 }
 
-function queryObject(getQbject, destFolder, item, lastModifiedDate, callback) {
-    getQbject(null, function(error, result) {
-        if (error) {
-            throw error
-        }
-        var files = []
-        for(var Object of result) {
+function queryObject(
+        result, destFolder,
+        item, lastModifiedDate, callback) {
+    var files = []
+    var getObject = function(result) {
+        if (result.length <= 0) {
+            callback(null, files)
+        } else {
+            var Object = result.shift()
             var name = eval("`" + item.Object.Name + "`")
             var definition = eval("`" + item.Object.Definition + "`")
             
@@ -49,65 +54,98 @@ function queryObject(getQbject, destFolder, item, lastModifiedDate, callback) {
             fs.writeFileSync(destFile, definition, 'utf8')
 
             files.push(destFile)
+            getObject(result)
         }
-        callback(files)
-    })
+    }
+    getObject(result)
 }
 
-function queryObjects(getQbjects, item, gitRepo, config, lastModifiedDate) {
-    var destFolder = config.schemaPath + '/' + item.ObjectName
-    if (fs.existsSync(destFolder) == false) {
-        fs.mkdirSync(destFolder)
-    }
-    getQbjects(null, function(error, result) {
-        if (error) {
-            throw error
-        }
+function queryObjects(
+        result, item, config,
+        lastModifiedDate, callback) {
+    var addFiles = []
+    var getObject = function(result) {
+        if (result.length <= 0) {
+            addGitRepo(addFiles, config, callback)
+        } else {
+            var Object = result.shift()
+            console.dir(Object)
 
-        var addFiles = []
-        var left = result.length
-        var completedCallback = function(destFile) {
-            addFiles = addFiles.concat(destFile)
-
-            --left
-            if (left <= 0) {
-                addGitRepo(gitRepo, addFiles, config)
-            }
-        }
-
-        for(var Object of result) {
             var query = eval("`" + item.QueryObject + "`")
             console.log(query)
-        
-            queryObject(
-                edge.func('sql',
-                {
-                    connectionString: config.connectionString,
-                    source: query
-                }),
-                destFolder, item, lastModifiedDate, completedCallback)
+
+            var conn = dbConnection(config.DB, config.connectionString)
+            conn.execute(query, function(error, objects) {
+                if (error) {
+                    callback(error)
+                } else {
+                    queryObject(
+                        objects, config.destFolder, item, lastModifiedDate,
+                        function(error, destFile) {
+                            if (error) {
+                                callback(error)
+                            } else {
+                                addFiles = addFiles.concat(destFile)
+                                getObject(result)
+                            }
+                        })
+                }
+            })
         }
-    })
+    }
+    getObject(result)
 }
 
-function schemaSync(config, lastModifiedDate) {
+function schemaSync(connectionString, syncConfig, lastModifiedDate, callback) {
+    if (callback == null) {
+        callback = function(err) {
+            if (err) {
+                throw err
+            }
+        }
+    }
+    var config = JSON.parse(JSON.stringify(syncConfig))
+    config.connectionString = connectionString
+
     if (fs.existsSync(config.schemaPath) == false) {
-        fs.mkdirSync(config.schemaPath)
+        fx.mkdirSync(config.schemaPath, 777, true)
     }
 
-    var gitRepo = git(config.gitRepo.path)
-    for (var item of config.schemaList) {
-        var query = eval("`" + item.QueryObjects + "`")
-        console.log(query)
+    config.gitRepo = git(config.git.path)
 
-        queryObjects(
-            edge.func('sql',
-            {
-                connectionString: config.connectionString,
-                source: query
-            }),
-            item, gitRepo, config, lastModifiedDate)
+    var getObject = function(schemaList) {
+        if (schemaList.length <= 0) {
+            callback(null)
+        } else {
+            var item = schemaList.shift()
+
+            config.destFolder = config.schemaPath + '/' + item.ObjectName
+            if (fx.existsSync(config.destFolder) == false) {
+                fx.mkdirSync(config.destFolder, 777, true)
+            }
+
+            var query = eval("`" + item.QueryObjects + "`")
+            console.log(query)
+
+            var conn = dbConnection(config.DB, config.connectionString)
+            conn.execute(query, function(error, result) {
+                if (error) {
+                    callback(error)
+                } else {
+                    queryObjects(
+                        result,  item, config, lastModifiedDate,
+                        function(err) {
+                            if (err) {
+                                callback(err)
+                            } else {
+                                getObject(schemaList)
+                            }
+                        })
+                }
+            })
+        }
     }
+    getObject(config.schemaList)
 }
 
 module.exports = schemaSync

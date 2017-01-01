@@ -26,6 +26,8 @@
     "edge": "^6.5.1",
     "edge-sql": "^0.1.2",
     "git-controller": "^1.0.5",
-    "moment": "^2.17.1"
+    "moment": "^2.17.1",
+    "node-fs": "^0.1.7",
+    "oracledb": "^1.12.2"
   }
 }
