@@ -4,6 +4,7 @@ var moment = require('moment')
 var fs = require('fs')
 var fx = require('node-fs')
 var git = require('git-controller')
+var eventEmitter = require('events').EventEmitter;
 var dbConnection = require('./dbConnection')
 
 function addGitRepo(files, config, callback) {
@@ -22,7 +23,7 @@ function addGitRepo(files, config, callback) {
                 var staged = gitRepo.statusSync().staged.length
                 if (staged > 0) {
                     var comment = moment(new Date()).format('YYYY-MM-DD hh:mm:ss')
-                    console.log(`${staged} files to commit: ${comment}.`)
+                    config.emitter.emit('Message', `${staged} files to commit: ${comment}.`)
                     gitRepo.commitSync(comment)
                 }
                 if (config.git.remote != null && config.git.branch != null &&
@@ -70,11 +71,9 @@ function queryObjects(result, item, config, callback) {
             addGitRepo(addFiles, config, callback)
         } else {
             var Object = result.shift()
-            console.dir(Object)
-
             var Param = config.param
             var query = eval("`" + item.QueryObject + "`")
-            console.log(query)
+            config.emitter.emit('Message', query)
 
             var conn = dbConnection(config.DB, config.connectionString)
             conn.execute(query, function(error, objects) {
@@ -110,12 +109,12 @@ function schemaSync(connectionString, syncConfig, param, callback) {
     var config = JSON.parse(JSON.stringify(syncConfig))
     config.connectionString = connectionString
     config.param = JSON.parse(JSON.stringify(param))
+    config.emitter = new eventEmitter()
+    config.gitRepo = git(config.git.path)
 
     if (fs.existsSync(config.schemaPath) == false) {
         fx.mkdirSync(config.schemaPath, 777, true)
     }
-
-    config.gitRepo = git(config.git.path)
 
     var getObject = function(schemaList) {
         if (schemaList.length <= 0) {
@@ -130,7 +129,7 @@ function schemaSync(connectionString, syncConfig, param, callback) {
 
             var Param = config.param
             var query = eval("`" + item.QueryObjects + "`")
-            console.log(query)
+            config.emitter.emit('Message', query)
 
             var conn = dbConnection(config.DB, config.connectionString)
             conn.execute(query, function(error, result) {
@@ -150,6 +149,7 @@ function schemaSync(connectionString, syncConfig, param, callback) {
         }
     }
     getObject(config.schemaList)
+    return config.emitter
 }
 
 module.exports = schemaSync
