@@ -19,7 +19,7 @@ function oracleConnection(connectionString) {
         oracledb.fetchAsString = [ oracledb.CLOB ]
     }
     return {
-        connetString: connectionString,
+        connectString: connectionString,
         execute: function(query, callback) {
             var executed = function(err, result) {
                 var objects = []
@@ -61,7 +61,7 @@ function oracleConnection(connectionString) {
             }
             oracledb.getConnection(
                 {
-                    exteralAuth: true,
+                    externalAuth: true,
                     connectString: this.connectString
                 },
                 connected)
