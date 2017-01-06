@@ -30,7 +30,7 @@ var schemaConfig = {
     ]
 }
 
-var gitRepo = {
+var gitConfig = {
     Path: './',
     Remote: 'origin',
     Branch: 'develop'
