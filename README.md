@@ -13,7 +13,6 @@ var SchemaSync = require('schema-to-git')
 
 var schemaConfig = {
     DB: 'MS SQL',
-    schemaPath: '../Schema',
     schemaList: [
         {
             ObjectName: 'Sproc',
@@ -43,7 +42,7 @@ schemaSyn.on('Message', function(msg) {
 
 var connectionString: "Data Source=Hostname\\DbInstance;Initial Catalog=DbName;Integrated Security=True"
 schemaSyn.GetSchema(
-    connectionString,
+    connectionString, '../Schema',
     { LastModifiedDate: '10/01/1997' },
     function(err, addedFiles) {
         schemaSyn.GitPush(addedFiles, function(err) {

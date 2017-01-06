@@ -90,11 +90,12 @@ function SchemaSync(schemaConfig, gitConfig) {
  
 util.inherits(SchemaSync, eventEmitter)
 
-SchemaSync.prototype.GetSchema = function getSchema(connectionString, param, callback) {
+SchemaSync.prototype.GetSchema = function getSchema(connectionString, schemaPath, param, callback) {
     callback = getCallback(callback)
 
     var self = this
     var config = JSON.parse(JSON.stringify(self.SchemaConfig))
+    config.schemaPath = schemaPath
     config.connectionString = connectionString
     config.param = JSON.parse(JSON.stringify(param))
 
