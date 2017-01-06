@@ -4,40 +4,9 @@ var moment = require('moment')
 var fs = require('fs')
 var fx = require('node-fs')
 var git = require('git-controller')
-var eventEmitter = require('events').EventEmitter;
+var util = require('util')
+var eventEmitter = require('events').EventEmitter
 var dbConnection = require('./dbConnection')
-
-function addGitRepo(files, config, callback) {
-    var gitRepo = config.gitRepo
-    var subFiles = files
-    if (files.length > 50) {
-        subFiles = files.splice(0,50)
-    }
-    gitRepo.add(subFiles, function(err) {
-        if (err) {
-            callback(err)
-        } else {
-            if (subFiles != files) {
-                addGitRepo(files, config, callback)
-            } else {
-                var staged = gitRepo.statusSync().staged.length
-                if (staged > 0) {
-                    var comment = moment(new Date()).format('YYYY-MM-DD hh:mm:ss')
-                    config.emitter.emit('Message', `${staged} files to commit: ${comment}.`)
-                    gitRepo.commitSync(comment)
-                }
-                if (config.git.remote != null && config.git.branch != null &&
-                    config.git.remote.length > 0 && config.git.length > 0) {
-                    gitRepo.push(config.git.remote, config.git.branch, function(err) {
-                        callback(err)
-                    })
-                } else {
-                    callback(null)
-                }
-            }
-        }
-    })
-}
 
 function queryObject(result, config, item, callback) {
     var destFolder = config.destFolder
@@ -64,16 +33,16 @@ function queryObject(result, config, item, callback) {
     getObject(result)
 }
 
-function queryObjects(result, item, config, callback) {
+function queryObjects(result, item, config, emitter, callback) {
     var addFiles = []
     var getObject = function(result) {
         if (result.length <= 0) {
-            addGitRepo(addFiles, config, callback)
+            callback(null, addFiles)
         } else {
             var Object = result.shift()
             var Param = config.param
             var query = eval("`" + item.QueryObject + "`")
-            config.emitter.emit('Message', query)
+            emitter.emit('Message', query)
 
             var conn = dbConnection(config.DB, config.connectionString)
             conn.execute(query, function(error, objects) {
@@ -97,28 +66,46 @@ function queryObjects(result, item, config, callback) {
     getObject(result)
 }
 
-function schemaSync(connectionString, syncConfig, param, callback) {
-    if (callback == null) {
-        callback = function(err) {
-            if (err) {
-                throw err
-            }
+var getCallback = function(callback) {
+    if (callback != null) {
+        return callback
+    }
+    return function(err) {
+        if (err) {
+            throw err
         }
     }
+}
 
-    var config = JSON.parse(JSON.stringify(syncConfig))
+function SchemaSync(schemaConfig, gitConfig) {
+    if ((this instanceof SchemaSync) == false) {
+        return new SchemaSync(schemaConfig, gitConfig)
+    }
+
+    this.SchemaConfig = schemaConfig
+    this.GitConfig = gitConfig
+
+    eventEmitter.call(this)
+}
+ 
+util.inherits(SchemaSync, eventEmitter)
+
+SchemaSync.prototype.GetSchema = function getSchema(connectionString, param, callback) {
+    callback = getCallback(callback)
+
+    var self = this
+    var config = JSON.parse(JSON.stringify(self.SchemaConfig))
     config.connectionString = connectionString
     config.param = JSON.parse(JSON.stringify(param))
-    config.emitter = new eventEmitter()
-    config.gitRepo = git(config.git.path)
 
     if (fs.existsSync(config.schemaPath) == false) {
         fx.mkdirSync(config.schemaPath, 777, true)
     }
 
+    var addFiles = []
     var getObject = function(schemaList) {
         if (schemaList.length <= 0) {
-            callback(null)
+            callback(null, addFiles)
         } else {
             var item = schemaList.shift()
 
@@ -129,18 +116,19 @@ function schemaSync(connectionString, syncConfig, param, callback) {
 
             var Param = config.param
             var query = eval("`" + item.QueryObjects + "`")
-            config.emitter.emit('Message', query)
+            self.emit('Message', query)
 
             var conn = dbConnection(config.DB, config.connectionString)
             conn.execute(query, function(error, result) {
                 if (error) {
                     callback(error)
                 } else {
-                    queryObjects(result,  item, config,
-                        function(err) {
+                    queryObjects(result, item, config, self,
+                        function(err, destFiles) {
                             if (err) {
                                 callback(err)
                             } else {
+                                addFiles = addFiles.concat(destFiles)
                                 getObject(schemaList)
                             }
                         })
@@ -149,7 +137,48 @@ function schemaSync(connectionString, syncConfig, param, callback) {
         }
     }
     getObject(config.schemaList)
-    return config.emitter
 }
 
-module.exports = schemaSync
+SchemaSync.prototype.GitPush = function gitPush(schemaFiles, callback) {
+    callback = getCallback(callback)
+
+    var self = this
+    var gitRepo = git(self.GitConfig.Path)
+
+    var commitGitRepo = function() {
+        var staged = gitRepo.statusSync().staged.length
+        if (staged > 0) {
+            var comment = moment(new Date()).format('YYYY-MM-DD hh:mm:ss')
+            self.emitter.emit('Message', `${staged} files to commit: ${comment}.`)
+            gitRepo.commitSync(comment)
+        }
+        if (self.GitConfig.Remote != null && self.GitConfig.Branch != null &&
+            self.GitConfig.Remote.length > 0 && self.GitConfig.Branch.length > 0) {
+            gitRepo.push(self.GitConfig.Remote, self.GitConfig.Branch, function(err) {
+                callback(err)
+            })
+        } else {
+            callback(null)
+        }
+    }
+
+    var addGitRepo = function(files) {
+        var subFiles = files
+        if (files.length > 50) {
+            subFiles = files.splice(0,50)
+        }
+        gitRepo.add(subFiles, function(err) {
+            if (err) {
+                callback(err)
+            } else {
+                if (subFiles != files) {
+                    addGitRepo(files)
+                } else {
+                    commitGitRepo()
+                }
+            }
+        })
+    }
+}
+
+module.exports = SchemaSync
