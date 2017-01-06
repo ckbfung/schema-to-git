@@ -1,6 +1,6 @@
 {
   "name": "schema-to-git",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Synchronize DB Schema to Git",
   "main": "index.js",
   "scripts": {
