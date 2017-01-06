@@ -42,7 +42,7 @@ function queryObjects(result, item, config, emitter, callback) {
             var Object = result.shift()
             var Param = config.param
             var query = eval("`" + item.QueryObject + "`")
-            emitter.emit('Message', query)
+            emitter.emit('Query', query, config)
 
             var conn = dbConnection(config.DB, config.connectionString)
             conn.execute(query, function(error, objects) {
@@ -117,7 +117,7 @@ SchemaSync.prototype.GetSchema = function getSchema(connectionString, schemaPath
 
             var Param = config.param
             var query = eval("`" + item.QueryObjects + "`")
-            self.emit('Message', query)
+            self.emit('Query', query, config)
 
             var conn = dbConnection(config.DB, config.connectionString)
             conn.execute(query, function(error, result) {
@@ -150,7 +150,7 @@ SchemaSync.prototype.GitPush = function gitPush(schemaFiles, callback) {
         var staged = gitRepo.statusSync().staged.length
         if (staged > 0) {
             var comment = moment(new Date()).format('YYYY-MM-DD hh:mm:ss')
-            self.emitter.emit('Message', `${staged} files to commit: ${comment}.`)
+            self.emit('Message', `${staged} files to commit: ${comment}.`)
             gitRepo.commitSync(comment)
         }
         if (self.GitConfig.Remote != null && self.GitConfig.Branch != null &&
