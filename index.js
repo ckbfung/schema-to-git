@@ -180,6 +180,8 @@ SchemaSync.prototype.GitPush = function gitPush(schemaFiles, callback) {
             }
         })
     }
+
+    addGitRepo(schemaFiles)
 }
 
 module.exports = SchemaSync
