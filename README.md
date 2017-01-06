@@ -11,14 +11,9 @@ $ npm install schema-to-git
 ```js
 var SchemaSync = require('schema-to-git')
 
-var config = {
+var schemaConfig = {
     DB: 'MS SQL',
     schemaPath: '../Schema',
-    gitRepo : {
-        path: './',
-        remote: 'origin',
-        branch: 'develop'
-    },
     schemaList: [
         {
             ObjectName: 'Sproc',
@@ -35,15 +30,26 @@ var config = {
     ]
 }
 
-var connectionString: "Data Source=Hostname\\DbInstance;Initial Catalog=DbName;Integrated Security=True"
-var schemaSyn = SchemaSync(
-    connectionString, config, { LastModifiedDate: '10/01/1997' },
-    function(err) {
-        if (err) {
-            console.log(err)
-        }
-    })
+var gitRepo = {
+    Path: './',
+    Remote: 'origin',
+    Branch: 'develop'
+}
+
+var schemaSyn = SchemaSync(schemaConfig, gitConfig)
 schemaSyn.on('Message', function(msg) {
-    console.log(msg)
-})    
+    logger.info(msg)
+})
+
+var connectionString: "Data Source=Hostname\\DbInstance;Initial Catalog=DbName;Integrated Security=True"
+schemaSyn.GetSchema(
+    connectionString,
+    { LastModifiedDate: '10/01/1997' },
+    function(err, addedFiles) {
+        schemaSyn.GitPush(addedFiles, function(err) {
+            if (err) {
+                logger.error(err)
+            }
+        })
+    })
 ```
