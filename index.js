@@ -1,6 +1,5 @@
 'use strict'
 
-var moment = require('moment')
 var fs = require('fs')
 var fx = require('node-fs')
 var git = require('git-controller')
@@ -140,7 +139,7 @@ SchemaSync.prototype.GetSchema = function getSchema(connectionString, schemaPath
     getObject(config.schemaList)
 }
 
-SchemaSync.prototype.GitPush = function gitPush(schemaFiles, callback) {
+SchemaSync.prototype.GitPush = function gitPush(schemaFiles, comment, callback) {
     callback = getCallback(callback)
 
     var self = this
@@ -149,7 +148,6 @@ SchemaSync.prototype.GitPush = function gitPush(schemaFiles, callback) {
     var commitGitRepo = function() {
         var staged = gitRepo.statusSync().staged.length
         if (staged > 0) {
-            var comment = moment(new Date()).format('YYYY-MM-DD hh:mm:ss')
             self.emit('Message', `${staged} files to commit: ${comment}.`)
             gitRepo.commitSync(comment)
         }

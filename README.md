@@ -45,7 +45,8 @@ schemaSyn.GetSchema(
     connectionString, '../Schema',
     { LastModifiedDate: '10/01/1997' },
     function(err, addedFiles) {
-        schemaSyn.GitPush(addedFiles, function(err) {
+        var comment = moment(new Date()).format('YYYY-MM-DD hh:mm:ss')
+        schemaSyn.GitPush(addedFiles, comment, function(err) {
             if (err) {
                 logger.error(err)
             }
