@@ -11,13 +11,13 @@
     "url": "git+https://github.com/ckbfung/schema-to-git.git"
   },
   "keywords": [
-    "schema\u001b[D\u001b[D\u001b[D\u001b[D\u001b[D\u001b[Ddb",
     "schema",
     "synchronize",
+    "sync",
     "git"
   ],
   "author": "ckbfung",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/ckbfung/schema-to-git/issues"
   },
