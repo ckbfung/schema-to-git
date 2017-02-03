@@ -36,7 +36,7 @@ var gitConfig = {
 }
 
 var schemaSyn = SchemaSync(schemaConfig, gitConfig)
-schemaSyn.on('Queue', function(msg, config) {
+schemaSyn.on('Query', function(msg, config) {
     logger.info(msg, config)
 })
 schemaSyn.on('Message', function(msg) {

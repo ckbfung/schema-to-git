@@ -45,7 +45,9 @@ function oracleConnection(connectionString) {
                         [],
                         function(err) {
                             if (err) {
-                                callback(err)
+                                connection.release(function() {
+                                    callback(err)
+                                })
                             } else {
                                 connection.execute(
                                     query, [], { maxRows: 10000 },
